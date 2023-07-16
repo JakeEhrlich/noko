@@ -9,6 +9,7 @@ repository = "https://github.com/JakeEhrlich/noko"
 license = "MIT"
 description = "A tool for viewing logs"
 keywords = ["logging", "tracing", "search", "cli", "grep"]
+categories = ["command-line-utilities", "development-tools"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
