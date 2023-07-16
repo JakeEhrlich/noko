@@ -1,4 +1,6 @@
+mod eval;
 mod parser;
+
 use miette::Report;
 
 fn main() -> Result<(), Report> {

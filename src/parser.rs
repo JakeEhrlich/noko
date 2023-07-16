@@ -15,6 +15,14 @@ pub enum Expr<Span = Range<usize>> {
 }
 
 impl<Span> Expr<Span> {
+    pub fn span(&self) -> &Span {
+        match self {
+            Expr::Var(_, s) => s,
+            Expr::Call(_, s) => s,
+            Expr::StringLiteral(_, s) => s,
+            Expr::ColorLiteral(_, s) => s,
+        }
+    }
     #[cfg(test)]
     fn remove_spans(self) -> Expr<()> {
         match self {
