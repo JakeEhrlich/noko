@@ -1,0 +1,11 @@
+---
+source: src/parser.rs
+expression: "parse(\"\\n\\nthis-is-a-test\\n\\n\")"
+---
+Ok(
+    [
+        Var(
+            "this-is-a-test",
+        ),
+    ],
+)

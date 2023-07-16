@@ -33,7 +33,7 @@ fn in_assci_set(c: char, set: &[bool; 256]) -> bool {
 }
 
 fn is_leading_var_char(c: &char) -> bool {
-    const CSET: [bool; 256] = assci_char_set("!$%&*+-./:<=>?@^_~");
+    const CSET: [bool; 256] = assci_char_set("!$%&*+-.:<=>?@^_~");
     c.is_alphabetic() || in_assci_set(*c, &CSET)
 }
 
@@ -181,7 +181,7 @@ mod tests {
     fn expr_strategy() -> impl Strategy<Value = Expr> {
         prop_oneof![
             // For cases without data, `Just` is all you need
-            "[a-zA-Z!$%&*+\\-./:<=>?@\\^_~][a-zA-Z0-9!$%&*+\\-./:<=>?@\\^_~]*".prop_map(Expr::Var),
+            "[a-zA-Z!$%&*+\\-.:<=>?@\\^_~][a-zA-Z0-9!$%&*+\\-.:<=>?@\\^_~]*".prop_map(Expr::Var),
             "[a-fA-F0-9]{6}".prop_map(Expr::ColorLiteral)
         ]
     }
@@ -192,5 +192,29 @@ mod tests {
       fn is_inverse(expr in expr_strategy()) {
         assert_eq!(expr, parse(&print_ast(&expr))?[0]);
       }
+    }
+
+    #[test]
+    fn check_var() {
+        insta::assert_debug_snapshot!(parse("this-is-a-test"));
+        insta::assert_debug_snapshot!(parse("  this-is-a-test  "));
+        insta::assert_debug_snapshot!(parse("// arstarstarst\nthis-is-a-test//arstarst"));
+        insta::assert_debug_snapshot!(parse("this-is-a-test // arstarst //arstrst"));
+        insta::assert_debug_snapshot!(parse("   this-is-a-test"));
+        insta::assert_debug_snapshot!(parse("\n\nthis-is-a-test\n\n"));
+        insta::assert_debug_snapshot!(parse("str->int"));
+        insta::assert_debug_snapshot!(parse("+"));
+        insta::assert_debug_snapshot!(parse("this-is-a-test//arstarst"));
+    }
+
+    
+    #[test]
+    fn check_color() {
+        insta::assert_debug_snapshot!(parse("#aFaFFA//arstRSTarst arst arst"));
+        insta::assert_debug_snapshot!(parse("  #111111  "));
+        insta::assert_debug_snapshot!(parse("#a1b2c3"));
+        insta::assert_debug_snapshot!(parse("#aaaaaa // arstarst //arstrst"));
+        insta::assert_debug_snapshot!(parse("   #aaaaaa"));
+        insta::assert_debug_snapshot!(parse("\n\n#aaaaaa\n\n"));
     }
 }

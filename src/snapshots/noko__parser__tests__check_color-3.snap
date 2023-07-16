@@ -1,0 +1,11 @@
+---
+source: src/parser.rs
+expression: "parse(\"#a1b2c3\")"
+---
+Ok(
+    [
+        ColorLiteral(
+            "a1b2c3",
+        ),
+    ],
+)
