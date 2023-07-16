@@ -5,7 +5,7 @@ use miette::LabeledSpan;
 use miette::SourceSpan;
 use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
     Var(String),
     Call(Vec<Expr>),
@@ -113,11 +113,9 @@ pub fn to_parse_error(source: &str, err: &Simple<char>) -> ParseError {
             begin: LabeledSpan::at(span.clone(), "Opening paren here"),
             end: LabeledSpan::at(err.span(), "mismatch here"),
         },
-        _ => {
-            ParseError::Generic {
-                msg: err.to_string(),
-            }
-        }
+        _ => ParseError::Generic {
+            msg: err.to_string(),
+        },
     }
 }
 
@@ -140,9 +138,7 @@ pub enum ParseError {
 
     #[error("Parse Error: {msg}")]
     #[diagnostic(code(parser::generic_error))]
-    Generic {
-        msg: String,
-    },
+    Generic { msg: String },
 }
 
 #[derive(Debug, Error, Diagnostic)]
@@ -157,9 +153,44 @@ pub struct ParseErrors {
 }
 
 pub fn parse(source: &str) -> Result<Vec<Expr>, ParseErrors> {
-    expr()
-        .parse(source)
-        .map_err(|errs| ParseErrors {
-            source_code: source.into(),
-            all: errs.iter().map(|err| to_parse_error(source, err)).collect()})
+    expr().parse(source).map_err(|errs| ParseErrors {
+        source_code: source.into(),
+        all: errs.iter().map(|err| to_parse_error(source, err)).collect(),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn print_ast(ast: &Expr) -> String {
+        match ast {
+            Expr::Var(name) => name.clone(),
+            Expr::StringLiteral(lit) => format!("{:?}", lit),
+            Expr::ColorLiteral(lit) => format!("#{}", lit),
+            Expr::Call(nodes) => {
+                format!(
+                    "({})",
+                    nodes.iter().map(print_ast).collect::<Vec<_>>().join(" ")
+                )
+            }
+        }
+    }
+
+    fn expr_strategy() -> impl Strategy<Value = Expr> {
+        prop_oneof![
+            // For cases without data, `Just` is all you need
+            "[a-zA-Z!$%&*+\\-./:<=>?@\\^_~][a-zA-Z0-9!$%&*+\\-./:<=>?@\\^_~]*".prop_map(Expr::Var),
+            "[a-fA-F0-9]{6}".prop_map(Expr::ColorLiteral)
+        ]
+    }
+
+    proptest! {
+      #![proptest_config(ProptestConfig::with_cases(5000))]
+      #[test]
+      fn is_inverse(expr in expr_strategy()) {
+        assert_eq!(expr, parse(&print_ast(&expr))?[0]);
+      }
+    }
 }
