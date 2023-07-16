@@ -1,0 +1,26 @@
+---
+source: src/parser.rs
+expression: "parse(\"((:)(:))\")"
+---
+Ok(
+    [
+        Call(
+            [
+                Call(
+                    [
+                        Var(
+                            ":",
+                        ),
+                    ],
+                ),
+                Call(
+                    [
+                        Var(
+                            ":",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ],
+)

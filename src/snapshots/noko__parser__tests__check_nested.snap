@@ -1,0 +1,25 @@
+---
+source: src/parser.rs
+expression: "parse(\"((this-is-a-test) \\\"RST\\\" #aaaaaa)\")"
+---
+Ok(
+    [
+        Call(
+            [
+                Call(
+                    [
+                        Var(
+                            "this-is-a-test",
+                        ),
+                    ],
+                ),
+                StringLiteral(
+                    "RST",
+                ),
+                ColorLiteral(
+                    "aaaaaa",
+                ),
+            ],
+        ),
+    ],
+)

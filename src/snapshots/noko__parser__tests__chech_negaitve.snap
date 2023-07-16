@@ -1,0 +1,29 @@
+---
+source: src/parser.rs
+expression: "parse(\"((this-is-a-test \\\"RST\\\" #aaaaaa)\")"
+---
+Err(
+    ParseErrors {
+        source_code: "((this-is-a-test \"RST\" #aaaaaa)",
+        all: [
+            Unexpected {
+                found: None,
+                expected: [
+                    '"',
+                    '#',
+                    '(',
+                    ')',
+                    '/',
+                ],
+                label: Some(
+                    SourceSpan {
+                        offset: SourceOffset(
+                            30,
+                        ),
+                        length: 1,
+                    },
+                ),
+            },
+        ],
+    },
+)

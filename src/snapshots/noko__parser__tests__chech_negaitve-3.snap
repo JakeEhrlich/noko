@@ -1,0 +1,18 @@
+---
+source: src/parser.rs
+expression: "parse(\" ( (#ufnst))\")"
+---
+Err(
+    ParseErrors {
+        source_code: " ( (#ufnst))",
+        all: [
+            Unexpected {
+                found: Some(
+                    'u',
+                ),
+                expected: [],
+                label: None,
+            },
+        ],
+    },
+)

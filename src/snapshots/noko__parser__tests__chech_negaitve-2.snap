@@ -1,0 +1,23 @@
+---
+source: src/parser.rs
+expression: "parse(\"arst arst) arst (arst arst))\")"
+---
+Err(
+    ParseErrors {
+        source_code: "arst arst) arst (arst arst))",
+        all: [
+            Unexpected {
+                found: Some(
+                    ')',
+                ),
+                expected: [
+                    '"',
+                    '#',
+                    '(',
+                    '/',
+                ],
+                label: None,
+            },
+        ],
+    },
+)

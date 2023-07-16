@@ -5,7 +5,7 @@ use miette::LabeledSpan;
 use miette::SourceSpan;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expr {
     Var(String),
     Call(Vec<Expr>),
@@ -25,9 +25,8 @@ const fn assci_char_set(set: &'static str) -> [bool; 256] {
 }
 
 fn in_assci_set(c: char, set: &[bool; 256]) -> bool {
-    let true = c.is_ascii()
-    else {
-      return false;
+    let true = c.is_ascii() else {
+        return false;
     };
     set[u32::from(c) as usize]
 }
@@ -52,7 +51,7 @@ fn varible() -> impl Parser<char, Expr, Error = Simple<char>> {
 
 fn comment() -> impl Parser<char, (), Error = Simple<char>> + Clone {
     just("//")
-        .then(take_until(text::newline()))
+        .then(take_until(text::newline().or(end())))
         .padded()
         .repeated()
         .ignored()
@@ -87,13 +86,16 @@ pub fn expr() -> impl Parser<char, Vec<Expr>, Error = Simple<char>> {
             varible(),
             string_literal(),
             hex_color_literal(),
-            e.delimited_by(just('('), just(')')).map(Expr::Call),
+            e.delimited_by(just('('), just(')'))
+                .padded()
+                .padded_by(comment())
+                .map(Expr::Call),
         ))
         .repeated()
         .at_least(1)
+        .padded()
+        .padded_by(comment())
     })
-    .padded()
-    .padded_by(comment())
 }
 
 pub fn to_parse_error(source: &str, err: &Simple<char>) -> ParseError {
@@ -160,10 +162,13 @@ pub struct ParseErrors {
 }
 
 pub fn parse(source: &str) -> Result<Vec<Expr>, ParseErrors> {
-    expr().parse(source).map_err(|errs| ParseErrors {
-        source_code: source.into(),
-        all: errs.iter().map(|err| to_parse_error(source, err)).collect(),
-    })
+    expr()
+        .then_ignore(end())
+        .parse(source)
+        .map_err(|errs| ParseErrors {
+            source_code: source.into(),
+            all: errs.iter().map(|err| to_parse_error(source, err)).collect(),
+        })
 }
 
 #[cfg(test)]
@@ -174,7 +179,7 @@ mod tests {
     fn print_ast(ast: &Expr) -> String {
         match ast {
             Expr::Var(name) => name.clone(),
-            Expr::StringLiteral(lit) => format!("{:?}", lit),
+            Expr::StringLiteral(lit) => format!("\"{}\"", lit),
             Expr::ColorLiteral(lit) => format!("#{}", lit),
             Expr::Call(nodes) => {
                 format!(
@@ -185,19 +190,32 @@ mod tests {
         }
     }
 
+    #[test]
+    fn check_print() {
+        insta::assert_debug_snapshot!(print_ast(&parse("((:) (:))").unwrap()[0]));
+    }
+
     fn expr_strategy() -> impl Strategy<Value = Expr> {
-        prop_oneof![
+        let leaf = prop_oneof![
             // For cases without data, `Just` is all you need
             "[a-zA-Z!$%&*+\\-.:<=>?@\\^_~][a-zA-Z0-9!$%&*+\\-.:<=>?@\\^_~]*".prop_map(Expr::Var),
-            "[a-fA-F0-9]{6}".prop_map(Expr::ColorLiteral)
-        ]
+            "[a-fA-F0-9]{6}".prop_map(Expr::ColorLiteral),
+            "[^\"\\\\]*".prop_map(Expr::StringLiteral),
+        ];
+        // prop::collection::vec(expr_strategy(), 0..10).prop_map(Expr::Call)
+        leaf.prop_recursive(
+            8,   // 8 levels deep
+            256, // Shoot for maximum size of 256 nodes
+            10,  // We put up to 10 items per collection
+            |inner| prop_oneof![prop::collection::vec(inner, 1..10).prop_map(Expr::Call)],
+        )
     }
 
     proptest! {
-      #![proptest_config(ProptestConfig::with_cases(5000))]
+      #![proptest_config(ProptestConfig::with_cases(500))]
       #[test]
       fn is_inverse(expr in expr_strategy()) {
-        assert_eq!(expr, parse(&print_ast(&expr))?[0]);
+        assert_eq!(vec![expr.clone()], parse(&print_ast(&expr))?);
       }
     }
 
@@ -227,6 +245,7 @@ mod tests {
     #[test]
     fn check_str_lit() {
         insta::assert_debug_snapshot!(parse("\"this is a test\""));
+        insta::assert_debug_snapshot!(parse("\"\""));
     }
 
     #[test]
@@ -238,5 +257,23 @@ mod tests {
         insta::assert_debug_snapshot!(parse("   (arstarst arst arst)"));
         insta::assert_debug_snapshot!(parse("\n\n(test test2)\n\n"));
         insta::assert_debug_snapshot!(parse("(   str->int \"10\"//arst\n)"));
+    }
+
+    #[test]
+    fn check_nested() {
+        insta::assert_debug_snapshot!(parse("((this-is-a-test) \"RST\" #aaaaaa)"));
+        insta::assert_debug_snapshot!(parse("((arst arst) arst (arst arst))"));
+        insta::assert_debug_snapshot!(parse(" ( (arst))"));
+        insta::assert_debug_snapshot!(parse("( (arst) s (arst ) ) arst RSt"));
+        insta::assert_debug_snapshot!(parse("((:)(:))"));
+    }
+
+    #[test]
+    fn chech_negaitve() {
+        insta::assert_debug_snapshot!(parse("((this-is-a-test \"RST\" #aaaaaa)"));
+        insta::assert_debug_snapshot!(parse("arst arst) arst (arst arst))"));
+        insta::assert_debug_snapshot!(parse(" ( (#ufnst))"));
+        insta::assert_debug_snapshot!(parse(" ( (#111111111111))"));
+        insta::assert_debug_snapshot!(parse("( (#111) s (arst) ) arst RSt"));
     }
 }

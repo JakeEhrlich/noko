@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 4b2fb53ee6f871f61c8f8cddf604c670431eea8aa1ab07b466426f9cfa303b38 # shrinks to expr = StringLiteral("\"\"")
+cc 9dc081a15abc5c6eaf94eaa66b537fbb36258e9401b7dd00c73c58c422fbba39 # shrinks to expr = Call([Call([]), Var("$")])

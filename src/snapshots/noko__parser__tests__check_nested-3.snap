@@ -1,0 +1,19 @@
+---
+source: src/parser.rs
+expression: "parse(\" ( (arst))\")"
+---
+Ok(
+    [
+        Call(
+            [
+                Call(
+                    [
+                        Var(
+                            "arst",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ],
+)
