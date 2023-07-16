@@ -1,0 +1,11 @@
+---
+source: src/parser.rs
+expression: "parse(\"\\\"this is a test\\\"\")"
+---
+Ok(
+    [
+        StringLiteral(
+            "this is a test",
+        ),
+    ],
+)

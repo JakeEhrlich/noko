@@ -1,0 +1,27 @@
+---
+source: src/parser.rs
+expression: "parse(\"( s s s ) arst RSt\")"
+---
+Ok(
+    [
+        Call(
+            [
+                Var(
+                    "s",
+                ),
+                Var(
+                    "s",
+                ),
+                Var(
+                    "s",
+                ),
+            ],
+        ),
+        Var(
+            "arst",
+        ),
+        Var(
+            "RSt",
+        ),
+    ],
+)

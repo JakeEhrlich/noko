@@ -1,0 +1,23 @@
+---
+source: src/parser.rs
+expression: "parse(\"()\")"
+---
+Err(
+    ParseErrors {
+        source_code: "()",
+        all: [
+            Unexpected {
+                found: Some(
+                    ')',
+                ),
+                expected: [
+                    '"',
+                    '#',
+                    '(',
+                    '/',
+                ],
+                label: None,
+            },
+        ],
+    },
+)

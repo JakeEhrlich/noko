@@ -101,11 +101,18 @@ pub fn to_parse_error(source: &str, err: &Simple<char>) -> ParseError {
         SimpleReason::Unexpected => {
             let mut lbls: Vec<_> = err.label().into_iter().map(|_| err.span().into()).collect();
             if lbls.is_empty() && err.found().is_none() {
-                lbls = vec![(source.len() - 1..source.len()).into()];
+                let start = if source.is_empty() {
+                    0
+                } else {
+                    source.len() - 1
+                };
+                lbls = vec![(start..source.len()).into()];
             }
+            let mut expected: Vec<_> = err.expected().flatten().cloned().collect();
+            expected.sort();
             ParseError::Unexpected {
                 found: err.found().copied(),
-                expected: err.expected().flatten().cloned().collect(),
+                expected,
                 label: lbls.into_iter().next(),
             }
         }
@@ -207,7 +214,6 @@ mod tests {
         insta::assert_debug_snapshot!(parse("this-is-a-test//arstarst"));
     }
 
-    
     #[test]
     fn check_color() {
         insta::assert_debug_snapshot!(parse("#aFaFFA//arstRSTarst arst arst"));
@@ -216,5 +222,21 @@ mod tests {
         insta::assert_debug_snapshot!(parse("#aaaaaa // arstarst //arstrst"));
         insta::assert_debug_snapshot!(parse("   #aaaaaa"));
         insta::assert_debug_snapshot!(parse("\n\n#aaaaaa\n\n"));
+    }
+
+    #[test]
+    fn check_str_lit() {
+        insta::assert_debug_snapshot!(parse("\"this is a test\""));
+    }
+
+    #[test]
+    fn check_call() {
+        insta::assert_debug_snapshot!(parse("(this-is-a-test \"RST\" #aaaaaa)"));
+        insta::assert_debug_snapshot!(parse("()"));
+        insta::assert_debug_snapshot!(parse(""));
+        insta::assert_debug_snapshot!(parse("( s s s ) arst RSt"));
+        insta::assert_debug_snapshot!(parse("   (arstarst arst arst)"));
+        insta::assert_debug_snapshot!(parse("\n\n(test test2)\n\n"));
+        insta::assert_debug_snapshot!(parse("(   str->int \"10\"//arst\n)"));
     }
 }

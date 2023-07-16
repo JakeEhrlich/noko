@@ -1,0 +1,18 @@
+---
+source: src/parser.rs
+expression: "parse(\"(   str->int \\\"10\\\"//arst\\n)\")"
+---
+Ok(
+    [
+        Call(
+            [
+                Var(
+                    "str->int",
+                ),
+                StringLiteral(
+                    "10",
+                ),
+            ],
+        ),
+    ],
+)

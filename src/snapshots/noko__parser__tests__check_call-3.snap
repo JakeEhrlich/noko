@@ -1,0 +1,28 @@
+---
+source: src/parser.rs
+expression: "parse(\"\")"
+---
+Err(
+    ParseErrors {
+        source_code: "",
+        all: [
+            Unexpected {
+                found: None,
+                expected: [
+                    '"',
+                    '#',
+                    '(',
+                    '/',
+                ],
+                label: Some(
+                    SourceSpan {
+                        offset: SourceOffset(
+                            0,
+                        ),
+                        length: 0,
+                    },
+                ),
+            },
+        ],
+    },
+)

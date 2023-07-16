@@ -1,0 +1,18 @@
+---
+source: src/parser.rs
+expression: "parse(\"\\n\\n(test test2)\\n\\n\")"
+---
+Ok(
+    [
+        Call(
+            [
+                Var(
+                    "test",
+                ),
+                Var(
+                    "test2",
+                ),
+            ],
+        ),
+    ],
+)
