@@ -13,3 +13,5 @@ keywords = ["logging", "tracing", "search", "cli", "grep"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chumsky = { version = "0.9.2", default-features = false }
+miette = { version = "5.9.0", default-features = false, features = ["fancy"] }
