@@ -10,16 +10,21 @@ Ok(
                     [
                         Var(
                             "this-is-a-test",
+                            2..16,
                         ),
                     ],
+                    1..18,
                 ),
                 StringLiteral(
                     "RST",
+                    18..23,
                 ),
                 ColorLiteral(
                     "aaaaaa",
+                    24..31,
                 ),
             ],
+            0..32,
         ),
     ],
 )

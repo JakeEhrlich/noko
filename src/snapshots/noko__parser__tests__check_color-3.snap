@@ -6,6 +6,7 @@ Ok(
     [
         ColorLiteral(
             "a1b2c3",
+            0..7,
         ),
     ],
 )

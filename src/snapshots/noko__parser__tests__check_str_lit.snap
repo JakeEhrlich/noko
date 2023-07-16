@@ -6,6 +6,7 @@ Ok(
     [
         StringLiteral(
             "this is a test",
+            0..16,
         ),
     ],
 )

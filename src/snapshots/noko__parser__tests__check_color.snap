@@ -6,6 +6,7 @@ Ok(
     [
         ColorLiteral(
             "aFaFFA",
+            0..7,
         ),
     ],
 )

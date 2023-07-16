@@ -3,14 +3,27 @@ use chumsky::prelude::*;
 use miette::Diagnostic;
 use miette::LabeledSpan;
 use miette::SourceSpan;
+use std::ops::Range;
 use thiserror::Error;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Expr {
-    Var(String),
-    Call(Vec<Expr>),
-    StringLiteral(String),
-    ColorLiteral(String),
+pub enum Expr<Span = Range<usize>> {
+    Var(String, Span),
+    Call(Vec<Expr<Span>>, Span),
+    StringLiteral(String, Span),
+    ColorLiteral(String, Span),
+}
+
+impl<Span> Expr<Span> {
+    #[cfg(test)]
+    fn remove_spans(self) -> Expr<()> {
+        match self {
+            Expr::Var(s, _) => Expr::Var(s, ()),
+            Expr::Call(v, _) => Expr::Call(v.into_iter().map(|e| e.remove_spans()).collect(), ()),
+            Expr::StringLiteral(s, _) => Expr::StringLiteral(s, ()),
+            Expr::ColorLiteral(s, _) => Expr::ColorLiteral(s, ()),
+        }
+    }
 }
 
 const fn assci_char_set(set: &'static str) -> [bool; 256] {
@@ -44,7 +57,7 @@ fn varible() -> impl Parser<char, Expr, Error = Simple<char>> {
     filter(is_leading_var_char)
         .chain(filter(is_var_char).repeated())
         .collect()
-        .map(Expr::Var)
+        .map_with_span(Expr::Var)
         .padded()
         .padded_by(comment())
 }
@@ -62,7 +75,7 @@ fn string_literal() -> impl Parser<char, Expr, Error = Simple<char>> {
         .ignore_then(take_until(just("\"").ignored()))
         .map(|t| t.0)
         .collect()
-        .map(Expr::StringLiteral)
+        .map_with_span(Expr::StringLiteral)
         .padded()
         .padded_by(comment())
 }
@@ -75,7 +88,7 @@ fn hex_color_literal() -> impl Parser<char, Expr, Error = Simple<char>> {
     just("#")
         .ignore_then(filter(is_hex_digit).repeated().exactly(6))
         .collect()
-        .map(Expr::ColorLiteral)
+        .map_with_span(Expr::ColorLiteral)
         .padded()
         .padded_by(comment())
 }
@@ -89,7 +102,7 @@ pub fn expr() -> impl Parser<char, Vec<Expr>, Error = Simple<char>> {
             e.delimited_by(just('('), just(')'))
                 .padded()
                 .padded_by(comment())
-                .map(Expr::Call),
+                .map_with_span(Expr::Call),
         ))
         .repeated()
         .at_least(1)
@@ -178,10 +191,10 @@ mod tests {
 
     fn print_ast(ast: &Expr) -> String {
         match ast {
-            Expr::Var(name) => name.clone(),
-            Expr::StringLiteral(lit) => format!("\"{}\"", lit),
-            Expr::ColorLiteral(lit) => format!("#{}", lit),
-            Expr::Call(nodes) => {
+            Expr::Var(name, _) => name.clone(),
+            Expr::StringLiteral(lit, _) => format!("\"{}\"", lit),
+            Expr::ColorLiteral(lit, _) => format!("#{}", lit),
+            Expr::Call(nodes, _) => {
                 format!(
                     "({})",
                     nodes.iter().map(print_ast).collect::<Vec<_>>().join(" ")
@@ -198,16 +211,19 @@ mod tests {
     fn expr_strategy() -> impl Strategy<Value = Expr> {
         let leaf = prop_oneof![
             // For cases without data, `Just` is all you need
-            "[a-zA-Z!$%&*+\\-.:<=>?@\\^_~][a-zA-Z0-9!$%&*+\\-.:<=>?@\\^_~]*".prop_map(Expr::Var),
-            "[a-fA-F0-9]{6}".prop_map(Expr::ColorLiteral),
-            "[^\"\\\\]*".prop_map(Expr::StringLiteral),
+            "[a-zA-Z!$%&*+\\-.:<=>?@\\^_~][a-zA-Z0-9!$%&*+\\-.:<=>?@\\^_~]*"
+                .prop_map(|s| Expr::Var(s, 0..0)),
+            "[a-fA-F0-9]{6}".prop_map(|s| Expr::ColorLiteral(s, 0..0)),
+            "[^\"\\\\]*".prop_map(|s| Expr::StringLiteral(s, 0..0)),
         ];
         // prop::collection::vec(expr_strategy(), 0..10).prop_map(Expr::Call)
         leaf.prop_recursive(
             8,   // 8 levels deep
             256, // Shoot for maximum size of 256 nodes
             10,  // We put up to 10 items per collection
-            |inner| prop_oneof![prop::collection::vec(inner, 1..10).prop_map(Expr::Call)],
+            |inner| {
+                prop_oneof![prop::collection::vec(inner, 1..10).prop_map(|v| Expr::Call(v, 0..0))]
+            },
         )
     }
 
@@ -215,7 +231,10 @@ mod tests {
       #![proptest_config(ProptestConfig::with_cases(500))]
       #[test]
       fn is_inverse(expr in expr_strategy()) {
-        assert_eq!(vec![expr.clone()], parse(&print_ast(&expr))?);
+        assert_eq!(vec![expr.clone().remove_spans()],
+                   parse(&print_ast(&expr))?
+                  .into_iter().map(|e| e.remove_spans())
+                  .collect::<Vec<_>>());
       }
     }
 
