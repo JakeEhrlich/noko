@@ -1,0 +1,12 @@
+---
+source: src/eval.rs
+expression: "test(\"heaf\")"
+---
+Err(
+    UnregistredConstant {
+        help: Some(
+            "did you mean 'head' perhaps? note that 'head' is a function not a constant",
+        ),
+        constant: 0..4,
+    },
+)

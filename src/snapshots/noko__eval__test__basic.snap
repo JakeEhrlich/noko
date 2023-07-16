@@ -1,0 +1,9 @@
+---
+source: src/eval.rs
+expression: "test(\"a\")"
+---
+Ok(
+    [
+        pushc String("a"),
+    ],
+)

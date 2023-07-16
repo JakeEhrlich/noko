@@ -1,0 +1,9 @@
+---
+source: src/eval.rs
+expression: "test(\"(#ffffff)\")"
+---
+Err(
+    CallLiteral {
+        literal: 1..8,
+    },
+)

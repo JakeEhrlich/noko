@@ -1,0 +1,12 @@
+---
+source: src/eval.rs
+expression: "test(\"(head a b #ffffff)\")"
+---
+Ok(
+    [
+        pushc String("a"),
+        pushc Color { r: 33, g: 33, b: 33 },
+        pushc Color { r: 255, g: 255, b: 255 },
+        call <func> 3,
+    ],
+)

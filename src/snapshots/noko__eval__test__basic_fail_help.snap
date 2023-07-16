@@ -1,0 +1,12 @@
+---
+source: src/eval.rs
+expression: "test(\"clope\")"
+---
+Err(
+    UnregistredConstant {
+        help: Some(
+            "did you mean 'close' perhaps?",
+        ),
+        constant: 0..5,
+    },
+)

@@ -1,0 +1,11 @@
+---
+source: src/eval.rs
+expression: "test(\"(last (head) \\\"this is a str\\\")\")"
+---
+Ok(
+    [
+        call <func> 0,
+        pushc String("this is a str"),
+        call <func> 2,
+    ],
+)

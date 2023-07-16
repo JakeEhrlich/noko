@@ -1,0 +1,12 @@
+---
+source: src/eval.rs
+expression: "test(\"(clope a)\")"
+---
+Err(
+    UnregistredFunction {
+        help: Some(
+            "did you mean 'close' perhaps? note that 'close' is a constant not a function",
+        ),
+        function: 1..6,
+    },
+)

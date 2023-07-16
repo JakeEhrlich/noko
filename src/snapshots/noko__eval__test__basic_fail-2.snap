@@ -1,0 +1,10 @@
+---
+source: src/eval.rs
+expression: "test(\"(str->int a b a)\")"
+---
+Err(
+    UnregistredFunction {
+        help: None,
+        function: 1..9,
+    },
+)

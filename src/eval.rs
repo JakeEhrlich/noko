@@ -8,18 +8,29 @@ use std::ops::Range;
 use std::sync::Arc;
 use thiserror::Error;
 
-pub type EvalFunc = &'static fn(&[Value]) -> Value;
+// TODO: Add error handling
+pub type EvalFunc = fn(&[Value]) -> Value;
 
 // This is a high level byte code for a stack
 // machine. We might optimize this later into
 // something even more efficent if needed.
-enum ByteCode<'a> {
+#[derive(PartialEq)]
+enum ByteCode {
     Call(EvalFunc, usize),
-    PushConstant(&'a Value),
-    PushLiteral(Value),
+    PushConstant(Value),
+}
+
+impl std::fmt::Debug for ByteCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ByteCode::Call(_, usize) => write!(f, "call <func> {}", usize),
+            ByteCode::PushConstant(v) => write!(f, "pushc {:?}", v),
+        }
+    }
 }
 
 // TODO: Add time, duration, size, maybe other things
+#[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Color { r: u8, g: u8, b: u8 },
     Style(Arc<Style>),
@@ -88,7 +99,7 @@ fn handle_unreg_constant(
         // TODO: Add url to documentation on this
         // TODO: Add an error code help command that can be called
         return Some(format!(
-            "{} is a function, not a constant, did you mean to call it?",
+            "'{}' is a function, not a constant, did you mean to call it?",
             found
         ));
     }
@@ -102,7 +113,7 @@ fn handle_unreg_constant(
     let Some((closest_func, fdist)) = find_closest_match(found, reg) else {
         // If there's no best function we can return early
         if (cdist as f64) < 0.33 * (found.len() as f64) {
-            return Some(format!("did you mean {} perhaps?", closest_const));
+            return Some(format!("did you mean '{}' perhaps?", closest_const));
         } else {
             return None;
         }
@@ -111,7 +122,7 @@ fn handle_unreg_constant(
     if fdist < cdist {
         if (fdist as f64) < 0.33 * (found.len() as f64) {
             return Some(format!(
-                "did you mean {} perhaps? note that {} is a function not a constant",
+                "did you mean '{}' perhaps? note that '{}' is a function not a constant",
                 closest_func, closest_func
             ));
         } else {
@@ -119,7 +130,7 @@ fn handle_unreg_constant(
         }
     } else {
         if (cdist as f64) < 0.33 * (found.len() as f64) {
-            return Some(format!("did you mean {} perhaps?", closest_const));
+            return Some(format!("did you mean '{}' perhaps?", closest_const));
         } else {
             return None;
         }
@@ -136,7 +147,7 @@ fn handle_unreg_function(
         // TODO: Add url to documentation on this
         // TODO: Add an error code help command that can be called
         return Some(format!(
-            "{} is a constant, not a function and cannot be called",
+            "'{}' is a constant, not a function and cannot be called",
             found
         ));
     }
@@ -150,7 +161,7 @@ fn handle_unreg_function(
     let Some((closest_const, cdist)) = find_closest_match(found, constants) else {
         // If there's no best function we can return early
         if (fdist as f64) < 0.33 * (found.len() as f64) {
-            return Some(format!("did you mean {} perhaps?", closest_func));
+            return Some(format!("did you mean '{}' perhaps?", closest_func));
         } else {
             return None;
         }
@@ -159,7 +170,7 @@ fn handle_unreg_function(
     if cdist < fdist {
         if (cdist as f64) < 0.33 * (found.len() as f64) {
             return Some(format!(
-                "did you mean {} perhaps? note that {} is a constant not a function",
+                "did you mean '{}' perhaps? note that '{}' is a constant not a function",
                 closest_const, closest_const
             ));
         } else {
@@ -167,7 +178,7 @@ fn handle_unreg_function(
         }
     } else {
         if (fdist as f64) < 0.33 * (found.len() as f64) {
-            return Some(format!("did you mean {} perhaps?", closest_func));
+            return Some(format!("did you mean '{}' perhaps?", closest_func));
         } else {
             return None;
         }
@@ -175,10 +186,10 @@ fn handle_unreg_function(
 }
 
 fn to_byte_code<'a>(
-    constants: &'a HashMap<String, Value>,
+    constants: &HashMap<String, Value>,
     reg: &HashMap<String, EvalFunc>,
     expr: &Expr,
-    out: &mut Vec<ByteCode<'a>>,
+    out: &mut Vec<ByteCode>,
 ) -> Result<(), EvalError> {
     match expr {
         Expr::Var(name, span) => {
@@ -188,7 +199,7 @@ fn to_byte_code<'a>(
                     constant: span.clone(),
                 });
             };
-            out.push(ByteCode::PushConstant(value));
+            out.push(ByteCode::PushConstant(value.clone()));
         }
         Expr::Call(vec, span) => {
             if vec.is_empty() {
@@ -215,7 +226,7 @@ fn to_byte_code<'a>(
             out.push(ByteCode::Call(*eval_func, vec.len() - 1));
         }
         Expr::StringLiteral(str, _) => {
-            out.push(ByteCode::PushLiteral(Value::String(Arc::new(str.clone()))))
+            out.push(ByteCode::PushConstant(Value::String(Arc::new(str.clone()))))
         }
         Expr::ColorLiteral(color, span) => {
             let data = HEXLOWER_PERMISSIVE
@@ -229,8 +240,80 @@ fn to_byte_code<'a>(
                 g: data[1],
                 b: data[2],
             };
-            out.push(ByteCode::PushLiteral(color));
+            out.push(ByteCode::PushConstant(color));
         }
     };
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::parser;
+
+    fn head(args: &[Value]) -> Value {
+        if args.is_empty() {
+            Value::Integer(-1)
+        } else {
+            args[0].clone()
+        }
+    }
+
+    fn last(args: &[Value]) -> Value {
+        if args.is_empty() {
+            Value::Integer(-1)
+        } else {
+            args[args.len() - 1].clone()
+        }
+    }
+
+    fn create_env() -> (HashMap<String, Value>, HashMap<String, EvalFunc>) {
+        let mut consts = HashMap::new();
+        let mut funcs: HashMap<_, EvalFunc> = HashMap::new();
+        consts.insert("a".into(), Value::String(Arc::new("a".into())));
+        consts.insert(
+            "b".into(),
+            Value::Color {
+                r: 33,
+                g: 33,
+                b: 33,
+            },
+        );
+        consts.insert("close".into(), Value::Integer(1));
+        funcs.insert("head".into(), head);
+        funcs.insert("last".into(), last);
+        (consts, funcs)
+    }
+
+    fn test(code: &str) -> Result<Vec<ByteCode>, EvalError> {
+        let ast = parser::parse(code).unwrap()[0].clone();
+        let mut bc = vec![];
+        let (consts, funcs) = create_env();
+        to_byte_code(&consts, &funcs, &ast, &mut bc)?;
+        Ok(bc)
+    }
+
+    #[test]
+    fn test_basic() {
+        insta::assert_debug_snapshot!(test("a"));
+        insta::assert_debug_snapshot!(test("(head a b a)"));
+        insta::assert_debug_snapshot!(test("(head a b #ffffff)"));
+        insta::assert_debug_snapshot!(test("(last (head) \"this is a str\")"));
+    }
+
+    #[test]
+    fn test_basic_fail() {
+        insta::assert_debug_snapshot!(test("z"));
+        insta::assert_debug_snapshot!(test("(str->int a b a)"));
+        insta::assert_debug_snapshot!(test("(a b #ffffff)"));
+        insta::assert_debug_snapshot!(test("(#ffffff)"));
+    }
+
+    #[test]
+    fn test_basic_fail_help() {
+        insta::assert_debug_snapshot!(test("clope"));
+        insta::assert_debug_snapshot!(test("heaf"));
+        insta::assert_debug_snapshot!(test("(clope a)"));
+        insta::assert_debug_snapshot!(test("(head heaf)"));
+    }
 }
