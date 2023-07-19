@@ -3,10 +3,10 @@ source: src/eval.rs
 expression: "test(\"clope\")"
 ---
 Err(
-    UnregistredConstant {
+    UnregistredValue {
         help: Some(
             "did you mean 'close' perhaps?",
         ),
-        constant: 0..5,
+        value: 0..5,
     },
 )

@@ -3,8 +3,8 @@ source: src/eval.rs
 expression: "test(\"z\")"
 ---
 Err(
-    UnregistredConstant {
+    UnregistredValue {
         help: None,
-        constant: 0..1,
+        value: 0..1,
     },
 )

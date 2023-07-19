@@ -3,10 +3,10 @@ source: src/eval.rs
 expression: "test(\"heaf\")"
 ---
 Err(
-    UnregistredConstant {
+    UnregistredValue {
         help: Some(
-            "did you mean 'head' perhaps? note that 'head' is a function not a constant",
+            "did you mean 'head' perhaps? note that 'head' is a function not a value",
         ),
-        constant: 0..4,
+        value: 0..4,
     },
 )

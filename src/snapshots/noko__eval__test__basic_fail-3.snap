@@ -5,7 +5,7 @@ expression: "test(\"(a b #ffffff)\")"
 Err(
     UnregistredFunction {
         help: Some(
-            "'a' is a constant, not a function and cannot be called",
+            "'a' is a value, not a function and cannot be called",
         ),
         function: 1..2,
     },
